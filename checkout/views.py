@@ -1,5 +1,4 @@
-from django.http import HttpResponse
-from django.shortcuts import render, redirect, reverse, get_object_or_404
+from django.shortcuts import render, redirect, reverse, get_object_or_404, HttpResponse
 from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.conf import settings
@@ -50,7 +49,11 @@ def checkout(request):
         }
         order_form = OrderForm(form_data)
         if order_form.is_valid():
-            order = order_form.save()
+            order = order_form.save(commit=False)
+            pid = request.POST.get('client_secret').split('_secret')[0]
+            order.stripe_pid = pid
+            order.original_bag = json.dumps(bag)
+            order.save()
             for item_id, item_data in bag.items():
                 try:
                     product = Product.objects.get(id=item_id)
@@ -83,7 +86,6 @@ def checkout(request):
         else:
             messages.error(request, 'There was an error with your form. \
                 Please double check your information.')
-
     else:
         bag = request.session.get('bag', {})
         if not bag:
@@ -101,8 +103,6 @@ def checkout(request):
 
         order_form = OrderForm()
 
-        # in the video, the below code is not indented properly
-        # this is the correct indentation
         if not stripe_public_key:
             messages.warning(request, 'Stripe public key is missing. \
                 Did you forget to set it in your environment?')
@@ -115,7 +115,6 @@ def checkout(request):
         }
 
         return render(request, template, context)
-        # end of the corrected indentation
 
 
 def checkout_success(request, order_number):
@@ -135,4 +134,5 @@ def checkout_success(request, order_number):
     context = {
         'order': order,
     }
+
     return render(request, template, context)
