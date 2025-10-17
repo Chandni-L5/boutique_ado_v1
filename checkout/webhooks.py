@@ -52,3 +52,10 @@ def my_webhook_view(request):
     # Call the event handler with the event
     response = event_handler(event)
     return response
+
+
+def handle_event(self, event):
+    print(f"Ignored event: {event['type']}")
+    return HttpResponse(
+        content=f'Unhandled webhook received: {event["type"]}',
+        status=200)
