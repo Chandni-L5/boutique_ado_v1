@@ -13,12 +13,12 @@ import stripe
 def my_webhook_view(request):
     """ Listen for webhooks from Stripe """
     # Setup
-    wh__secret = settings.STRIPE_WH_SECRET
+    wh_secret = settings.STRIPE_WH_SECRET
     stripe.api_key = settings.STRIPE_SECRET_KEY
 
     #  Get the webhook data and verify its signature
     payload = request.body
-    sig_header = request.META['HTTP_STRIPE_SIGNATURE']
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE', '')
     event = None
 
     try:
@@ -32,7 +32,7 @@ def my_webhook_view(request):
         # Invalid signature
         return HttpResponse(status=400)
     except Exception as e:
-        return HttpResponse(content=e, status=400)
+        return HttpResponse(content=str(e), status=400)
 
     # Set up a webhook handler
     handler = StripeWH_Handler(request)
