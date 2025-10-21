@@ -6,6 +6,21 @@ from .models import UserProfile
 from .forms import UserProfileForm
 from checkout.models import Order
 
+from django.core.mail import send_mail
+from django.http import HttpResponse
+from django.conf import settings
+
+
+def test_email(request):
+    send_mail(
+        'Test Email',
+        'This is a test email from your Django app.',
+        settings.DEFAULT_FROM_EMAIL,  # uses the same from address as your site
+        ['your_real_email@gmail.com'],  # replace with your actual email
+        fail_silently=False,
+    )
+    return HttpResponse("Test email sent!")
+
 
 @login_required
 def profile(request):
