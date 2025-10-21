@@ -1,5 +1,4 @@
 from django.http import HttpResponse
-
 from .models import Order, OrderLineItem
 from products.models import Product
 
@@ -28,22 +27,27 @@ class StripeWH_Handler:
         """
         intent = event.data.object
         pid = intent.id
-        bag = intent.metadata.bag
-        save_info = intent.metadata.save_info
+        bag = intent.metadata.get('bag')  # safe access
+        save_info = intent.metadata.get('save_info')  # safe access
 
         # Get the Charge object
-        stripe_charge = stripe.Charge.retrieve(
-            intent.latest_charge
-        )
+        stripe_charge = stripe.Charge.retrieve(intent.latest_charge)
 
-        billing_details = stripe_charge.billing_details  # updated
+        billing_details = stripe_charge.billing_details
         shipping_details = intent.shipping
-        grand_total = round(stripe_charge.amount / 100, 2)  # updated
+        grand_total = round(stripe_charge.amount / 100, 2)
 
         # Clean data in the shipping details
         for field, value in shipping_details.address.items():
             if value == "":
                 shipping_details.address[field] = None
+
+        if bag is None:
+            # If there is no bag metadata, skip creating order
+            return HttpResponse(
+                content=f'Webhook received: {event["type"]} | WARNING: No bag metadata',
+                status=200
+            )
 
         order_exists = False
         attempt = 1
@@ -68,12 +72,12 @@ class StripeWH_Handler:
             except Order.DoesNotExist:
                 attempt += 1
                 time.sleep(1)
+
         if order_exists:
             return HttpResponse(
                 content=f'Webhook received: {event["type"]} | SUCCESS: Verified order already in database',
                 status=200)
         else:
-
             try:
                 order = Order.objects.create(
                     full_name=shipping_details.name,
